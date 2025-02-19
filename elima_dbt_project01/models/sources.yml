@@ -1,0 +1,29 @@
+version: 2
+
+sources:
+  - name: SNOWFLAKE_SOURCE
+    description: "This is the source for the Snowflake data warehouse"
+    database: SNOWFLAKE_SAMPLE_DATA
+    schema: TPCH_SF1
+    tables:
+      - name: CUSTOMER
+      - name: LINEITEM
+      - name: NATION
+      - name: ORDERS
+        freshness:
+          warn_after: {count: 100, period: day}
+          error_after: {count: 200, period: day}
+        loaded_at_field: O_ORDERDATE::timestamp
+      - name: PART
+      - name: PARTSUPP
+      - name: REGION
+        description: "This is the region table"
+        identifier: REGION
+        columns:
+          - name: R_REGIONKEY
+            description: "This is the region key"
+          - name: R_NAME
+            description: "This is the region name"
+          - name: R_COMMENT
+            description: "This is the region comment"
+      - name: SUPPLIER

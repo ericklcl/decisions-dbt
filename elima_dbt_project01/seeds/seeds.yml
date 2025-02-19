@@ -1,0 +1,12 @@
+version: 2
+
+seeds:
+  - name: calendar
+    description: Seed calendar table
+    columns:
+      - name: date
+        description: date
+      - name: year
+        description: year
+      - name: month
+        description: month

@@ -1,0 +1,5 @@
+.venv/
+logs/
+elima_dbt_project01/dbt_project.yml
+/elima_dbt_project01/dbt_project.yml
+profiles.yml
