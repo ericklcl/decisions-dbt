@@ -187,3 +187,34 @@ Isso garante que, caso o nome da tabela ou do esquema mude, basta atualizar o ar
 - Organize seus sources dentro de arquivos YAML separados, especialmente em projetos grandes.
 
 
+## dbt Seed
+
+O **dbt seed** permite carregar pequenos arquivos CSV para dentro do Data Warehouse como tabelas, possibilitando o uso desses dados dentro dos modelos dbt. Isso é útil para armazenar dados estáticos, tabelas de referência e conjuntos de dados auxiliares sem necessidade de pipelines de ingestão complexos.
+
+Os arquivos CSV que serão carregados pelo dbt seed devem ser armazenados na pasta `seed/` dentro do projeto dbt. Esses arquivos são então processados pelo dbt e convertidos em tabelas dentro do Data Warehouse configurado.
+
+### Comandos do dbt Seed
+
+#### Carregar os dados seed
+Para carregar os arquivos CSV como tabelas no Data Warehouse, execute:
+```sh
+dbt seed
+```
+
+#### Atualizar um seed específico
+Caso queira carregar apenas um seed específico, use:
+```sh
+dbt seed --select categories
+```
+
+### Como Referenciar um Seed no dbt
+Depois de carregado, um seed pode ser utilizado dentro dos modelos dbt com a função `ref`.
+
+#### Exemplo de Uso:
+```sql
+SELECT *
+FROM {{ ref('categories') }}
+```
+Isso permite que a tabela `categories` seja usada dentro dos modelos como qualquer outra tabela no Data Warehouse.
+
+
