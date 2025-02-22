@@ -1,0 +1,11 @@
+order_id,client_id,order_date,order_status,order_total,order_quantity,last_updated
+1,1,2021-01-01,completed,100,1,2021-01-01
+2,2,2021-01-02,completed,200,2,2021-01-02
+3,3,2021-01-03,completed,300,3,2021-01-03
+4,4,2021-01-04,completed,400,4,2021-01-04
+5,1,2021-01-05,completed,500,5,2021-01-05
+6,2,2021-01-06,completed,600,6,2021-01-06
+7,3,2021-01-07,completed,700,7,2021-01-07
+8,4,2021-01-08,completed,800,8,2021-01-08
+9,1,2021-01-09,completed,900,9,2021-01-09
+10,2,2021-01-10,skipped,1000,10,2021-01-30
