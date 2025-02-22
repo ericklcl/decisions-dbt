@@ -34,3 +34,12 @@ HELLO, WHERE ARE YOU?
 SELECT 
 {{ var6 }}
 FROM TABELA2
+
+Target name: {{ target.name }}
+
+Target user: {{ target.user }}
+Target database: {{ target.database }}
+
+DBT Version: {{ dbt_version }}
+
+Execution time: {{ run_started_at }}
