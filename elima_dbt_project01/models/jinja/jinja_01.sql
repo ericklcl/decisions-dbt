@@ -43,3 +43,5 @@ Target database: {{ target.database }}
 DBT Version: {{ dbt_version }}
 
 Execution time: {{ run_started_at }}
+
+{{ this }}
