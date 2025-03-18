@@ -88,7 +88,7 @@ Se tudo estiver configurado corretamente, você verá uma mensagem indicando que
 
 ## dbt Materializations
 
-No DBT, há vários tipos de materializações que permitem um controle sobre a performance e como os dados são persistidos. 
+No DBT, há vários tipos de materializações que permitem um controle sobre a performance e como os dados são persistidos.
 
 ### 1. **Table**
 A materialização `table` cria uma tabela física no banco de dados. Sempre que o modelo é executado, ele cria uma nova tabela substituindo a anterior.
@@ -128,93 +128,244 @@ A materialização `incremental` permite adicionar novos dados a uma tabela exis
 
 - **Uso recomendado**: Ideal para grandes volumes de dados que são atualizados periodicamente, como tabelas de transações ou logs.
 
+## Sources
 
-## dbt Sources
+No dbt, **sources** são tabelas ou views existentes no banco de dados que representam as fontes de dados presentes no Data Warehouse. O uso de sources permite rastrear a linhagem dos dados e melhorar a governança dos modelos.
 
-No dbt, **Sources** são tabelas ou arquivos externos que servem como ponto de entrada dos dados no projeto. Essas fontes geralmente representam dados brutos que foram carregados para um Data Warehouse a partir de sistemas transacionais, pipelines de ingestão ou outras fontes externas.
+### 1. Definição de um Source
+Os sources são definidos no arquivo `source.yml` dentro do diretório do projeto dbt.
 
-O uso de **sources** no dbt permite documentar e testar os dados desde sua origem, garantindo maior rastreabilidade e confiabilidade ao processo de transformação.
+Exemplo:
 
-### Definição de Sources
-Para definir um **source** no dbt, utilizamos arquivos YAML dentro da pasta `models/schema.yml` ou `models/sources.yml`.
-
-#### Exemplo de definição de Source:
 ```yaml
 version: 2
 
 sources:
-  - name: raw_data  # Nome da fonte de dados
-    database: my_database  # Opcional, dependendo do warehouse
-    schema: raw_schema  # Esquema onde as tabelas estão localizadas
+  - name: raw_data
+    description: "Tabelas brutas ingeridas no Snowflake."
+    database: meu_banco
+    schema: raw
     tables:
-      - name: orders
-        description: "Tabela contendo os pedidos realizados pelos clientes."
+      - name: clientes
+        description: "Tabela contendo informações dos clientes."
         columns:
-          - name: order_id
-            description: "Identificador único do pedido."
-            tests:
-              - unique
-              - not_null
-          - name: customer_id
-            description: "Identificador do cliente que fez o pedido."
-          - name: order_date
-            description: "Data em que o pedido foi realizado."
-            tests:
-              - not_null
+          - name: id
+            description: "Identificador único do cliente."
+            
 ```
 
-### Benefícios do uso de Sources
-1. **Documentação**: Permite descrever a origem dos dados e suas tabelas, facilitando a governança.
-2. **Testes de qualidade**: Aplicação de testes como `unique`, `not_null` e `relationships` diretamente nos dados de origem.
-3. **Rastreabilidade**: Melhora a transparência do fluxo de dados ao permitir a visualização das dependências e da linhagem.
-4. **Facilidade de Referência**: Em vez de hardcodear nomes de tabelas brutas nos modelos dbt, podemos referenciá-las de forma gerenciada com `source`.
+### 2. Utilizando Sources nos Modelos dbt
+Após definir os sources, eles podem ser referenciados nos modelos dbt usando a função `source()`.
 
-### Como Referenciar um Source no dbt
-Para referenciar um source dentro de um modelo dbt, utilizamos a função `source`.
+Exemplo:
 
-#### Exemplo:
 ```sql
-SELECT
-    order_id,
-    customer_id,
-    order_date
-FROM {{ source('raw_data', 'orders') }}
+SELECT *
+FROM {{ source('raw_data', 'clientes') }}
 ```
-Isso garante que, caso o nome da tabela ou do esquema mude, basta atualizar o arquivo de definição de sources sem necessidade de alterar diretamente os modelos SQL.
 
-### Boas práticas
-- Utilize `dbt source freshness` para monitorar a atualização dos dados de origem.
-- Organize seus sources dentro de arquivos YAML separados, especialmente em projetos grandes.
+### Source Freshness
 
+O dbt permite verificar o quão atualizados estão os dados nos **sources**, garantindo que os dados estejam sendo atualizados conforme esperado.
 
-## dbt Seed
+#### 1. Configuração da Verificação de Freshness
+A verificação de freshness pode ser configurada no `source.yml`:
 
-O **dbt seed** permite carregar pequenos arquivos CSV para dentro do Data Warehouse como tabelas, possibilitando o uso desses dados dentro dos modelos dbt. Isso é útil para armazenar dados estáticos, tabelas de referência e conjuntos de dados auxiliares sem necessidade de pipelines de ingestão complexos.
+```yaml
+version: 2
 
-Os arquivos CSV que serão carregados pelo dbt seed devem ser armazenados na pasta `seed/` dentro do projeto dbt. Esses arquivos são então processados pelo dbt e convertidos em tabelas dentro do Data Warehouse configurado.
+sources:
+  - name: raw_data
+    tables:
+      - name: clientes
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+        loaded_at_field: <column_name_or_expression>
+```
 
-### Comandos do dbt Seed
+#### 2. Executando a Verificação de Freshness
+O freshness pode ser verificado com:
 
-#### Carregar os dados seed
-Para carregar os arquivos CSV como tabelas no Data Warehouse, execute:
-```sh
+```bash
+dbt source freshness
+```
+
+Se os dados estiverem desatualizados, o dbt retornará um aviso ou erro com base nas configurações definidas.
+
+### Seeds
+
+Os **seeds** no dbt permitem carregar pequenos conjuntos de dados a partir de arquivos CSV para o banco de dados, facilitando o uso de dados de referência.
+
+#### 1. Criando um Seed
+Os arquivos seed devem ser colocados no diretório `seeds/` dentro do projeto dbt. Exemplo de arquivo `categorias.csv`:
+
+```csv
+id,nome
+1,Eletrodomésticos
+2,Eletrônicos
+3,Móveis
+```
+
+#### 2. Carregando Seeds
+Para carregar os seeds para o banco de dados, execute:
+
+```bash
 dbt seed
 ```
 
-#### Atualizar um seed específico
-Caso queira carregar apenas um seed específico, use:
-```sh
-dbt seed --select categories
+```bash
+dbt seed --select <seed_name>
 ```
+#### 3. Referenciando um Seed em um Modelo dbt
+Depois de carregado, um seed pode ser referenciado como uma tabela normal:
 
-### Como Referenciar um Seed no dbt
-Depois de carregado, um seed pode ser utilizado dentro dos modelos dbt com a função `ref`.
-
-#### Exemplo de Uso:
 ```sql
-SELECT *
-FROM {{ ref('categories') }}
+SELECT * FROM {{ ref('categorias') }}
 ```
-Isso permite que a tabela `categories` seja usada dentro dos modelos como qualquer outra tabela no Data Warehouse.
+
+Isso permite que os seeds sejam utilizados como tabelas de lookup ou listas de valores fixos dentro do dbt.
+
+
+### Snapshots
+
+Os **snapshots** no dbt permitem rastrear as mudanças nos dados ao longo do tempo, armazenando versões históricas de registros.
+
+#### Estratégias de Snapshot
+O dbt suporta duas estratégias de snapshot:
+
+1. **Timestamp**: Utiliza um campo de data/hora (`updated_at`) para verificar mudanças nos registros.
+   ```sql
+   {{ config(
+       unique_key='id',
+       strategy='timestamp',
+       updated_at='updated_at'
+   ) }}
+   ```
+
+2. **Check**: Compara os valores de colunas específicas para identificar mudanças.
+   ```sql
+   {{ config(
+       unique_key='id',
+       strategy='check',
+       check_cols=['nome', 'email']
+   ) }}
+   ```
+
+Essas estratégias ajudam a manter um histórico das alterações dos dados ao longo do tempo.
+
+### Jinja
+
+O dbt utiliza a linguagem **Jinja** para tornar seus modelos dinâmicos e reutilizáveis. Jinja permite o uso de lógica de programação dentro das queries SQL.
+
+#### 1. Variáveis e Expressões
+```sql
+{% set nome_tabela = 'clientes' %}
+SELECT * FROM {{ nome_tabela }}
+```
+
+#### 2. Estruturas de Controle
+##### If-Else
+```sql
+{% if var('modo') == 'detalhado' %}
+SELECT * FROM vendas_detalhado
+{% else %}
+SELECT * FROM vendas_resumido
+{% endif %}
+```
+
+##### Loops
+```sql
+{% for ano in range(2020, 2023) %}
+SELECT '{{ ano }}' AS ano UNION ALL
+{% endfor %}
+SELECT '2023' AS ano
+```
+
+#### 3. Filters
+Os **filters** permitem manipular dados dentro das expressões Jinja. Exemplos:
+
+```sql
+SELECT {{ 'exemplo' | upper }} -- Retorna 'EXEMPLO'
+SELECT {{ '  texto com espaços  ' | trim }} -- Retorna 'texto com espaços'
+SELECT {{ 42 | string }} -- Converte número para string
+```
+
+Jinja torna os modelos mais flexíveis, facilitando a parametrização e a reutilização de código.
+
+### Adapter no dbt
+
+Os **adapters** no dbt são responsáveis por conectar o dbt a diferentes bancos de dados, executando comandos SQL e manipulando relações.
+
+#### Utilizando Adapter no Jinja
+No dbt, podemos utilizar o adapter de diferentes maneiras para acessar funcionalidades específicas do banco de dados.
+
+##### 1. Usando Adapter com `adapter`
+Podemos utilizar `adapter` diretamente dentro de um modelo dbt para obter informações sobre o banco de dados:
+
+```sql
+SELECT {{ adapter.dispatch('current_timestamp')() }} AS data_atual
+```
+
+Neste caso, o `adapter.dispatch()` permite que o dbt utilize a implementação correta do `current_timestamp` de acordo com o banco de dados configurado.
+
+##### 2. Usando Adapter com `do adapter`
+Ao utilizar `do adapter`, podemos executar operações diretamente sem retorno de valor.
+
+Exemplo de uso para logar informações durante a execução:
+
+```sql
+{% do adapter.log('Iniciando processamento no banco de dados') %}
+```
+
+Isso pode ser útil para debug ou monitoramento dentro dos modelos.
+
+#### Exemplo Completo de Uso do Adapter
+Podemos usar o adapter para obter metadados sobre tabelas e esquemas:
+
+```sql
+{% set tables = adapter.list_relations(schema='public') %}
+
+SELECT '{{ tables | map(attribute='identifier') | join(", ") }}' AS tabelas_disponiveis
+```
+
+Esse código lista todas as tabelas no esquema `public` e as retorna como uma string formatada.
+
+O uso de `adapter` no dbt é uma forma poderosa de acessar informações específicas do banco e personalizar o comportamento dos modelos.
+
+### Relation no dbt
+
+A classe **Relation** representa um objeto no banco de dados, como uma tabela ou view. Podemos usar Jinja para gerar referências a esses objetos.
+
+#### 1. Criando uma Relation
+Podemos definir uma relation dinamicamente usando Jinja:
+
+```sql
+{% set minha_tabela = adapter.get_relation(database='meu_banco', schema='public', identifier='clientes') %}
+
+SELECT * FROM {{ minha_tabela }}
+```
+
+Esse código gera dinamicamente uma referência à tabela `clientes` dentro do banco de dados.
+
+### Column no dbt
+
+A classe **Column** representa as colunas dentro de uma tabela ou view. Podemos extrair informações sobre colunas de uma relação.
+
+#### 1. Obtendo Metadados das Colunas
+Podemos listar as colunas de uma tabela dinamicamente:
+
+```sql
+{% set colunas = adapter.get_columns_in_relation(relation=minha_tabela) %}
+
+SELECT {% for coluna in colunas %} {{ coluna.name }} {% if not loop.last %}, {% endif %} {% endfor %} FROM {{ minha_tabela }}
+```
+
+Esse código gera dinamicamente uma query que seleciona todas as colunas da tabela `clientes`.
+
+
+
+
+
 
 
