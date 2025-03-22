@@ -1,0 +1,1 @@
+{% do adapter.create_schema(api.Relation.create(database='DEMO_DB', schema='ELIMA_01')) %}
