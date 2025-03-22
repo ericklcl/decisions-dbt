@@ -9,6 +9,20 @@ sources:
       - name: CUSTOMER
       - name: LINEITEM
       - name: NATION
+        description: "This is the nation table"
+        identifier: NATION
+        columns:
+          - name: N_NATIONKEY
+            description: "This is the nation key"
+            tests:
+              - unique
+              - not_null
+          - name: N_NAME
+            description: "This is the nation name"
+          - name: N_REGIONKEY
+            description: "This is the region key"
+          - name: N_COMMENT
+            description: "This is the nation comment"
       - name: ORDERS
         freshness:
           warn_after: {count: 100, period: day}

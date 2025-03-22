@@ -2,7 +2,7 @@
 
 {{
    config(
-       target_database='demo_dev',
+       target_database='demo_db',
        target_schema='snapshots',
        unique_key='order_id',
        strategy='timestamp',

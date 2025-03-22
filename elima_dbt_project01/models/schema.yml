@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: src_nation
+    description: "This is the source nation table"
+    columns:
+      - name: N_NATIONKEY
+        description: "This is the nation key"
+        tests:
+          - unique
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3]
+      - name: N_NAME
+        description: "This is the nation name"
+      - name: N_REGIONKEY
+        description: "This is the region key"
+        tests:
+          - relationships: 
+              to: source('SNOWFLAKE_SOURCE', 'NATION')
+              field: N_REGIONKEY
+      - name: N_COMMENT
+        description: "This is the nation comment"
+  - name: src_region
+    description: "This is the source region table"
+    columns:
+      - name: R_REGIONKEY
+        description: "This is the region key"
+        tests:
+          - unique
+          - not_null
+      - name: R_NAME
+        description: "This is the region name"
+      - name: R_COMMENT
+        description: "This is the region comment"
