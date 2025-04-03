@@ -1,11 +1,19 @@
-SELECT
-O_ORDERKEY as order_key,
-O_CUSTKEY as customer_key,
-O_ORDERSTATUS as order_status,
-O_TOTALPRICE as total_price,
-O_ORDERDATE as order_date,
-O_ORDERPRIORITY as order_priority,
-O_CLERK as clerk,
-O_SHIPPRIORITY as ship_priority,
-O_COMMENT as comment
-FROM {{ ref('src_orders') }}
+with source as (
+    select * from {{ ref("src_orders") }}
+),
+
+renamed as (
+    select
+        o_orderkey      as order_key,
+        o_custkey       as customer_key,
+        o_orderstatus   as order_status,
+        o_totalprice    as total_price,
+        o_orderdate     as order_date,
+        o_orderpriority as order_priority,
+        o_clerk         as clerk,
+        o_shippriority  as ship_priority,
+        o_comment       as comment
+    from source
+)
+
+select * from renamed

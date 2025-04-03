@@ -1,5 +1,13 @@
-SELECT        
-        R_REGIONKEY as region_key,
-        R_NAME as region_name,
-        R_COMMENT as region_comment
-    FROM {{ ref('src_region') }}
+with source as (
+    select * from {{ ref("src_region") }}
+),
+
+renamed as (
+    select
+        r_regionkey as region_key,
+        r_name      as region_name,
+        r_comment   as comment
+    from source
+)
+
+select * from renamed

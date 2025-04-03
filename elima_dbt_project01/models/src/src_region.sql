@@ -1,8 +1,5 @@
-with src_region_cte as (
-    SELECT
-        R_REGIONKEY,
-        R_NAME,
-        R_COMMENT
-    FROM {{ source('SNOWFLAKE_SOURCE', 'REGION') }}
-)
-select * from src_region_cte
+select
+    r_regionkey,
+    r_name,
+    r_comment
+from {{ source('snowflake_source', 'raw_region') }}

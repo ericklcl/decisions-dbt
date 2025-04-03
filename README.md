@@ -126,7 +126,52 @@ A materialização `ephemeral` cria modelos temporários que não são persistid
 ### 4. **Incremental**
 A materialização `incremental` permite adicionar novos dados a uma tabela existente, com base em uma condição de incremento (por exemplo, a data da última atualização). A ideia é evitar a recriação da tabela inteira a cada execução, economizando tempo e recursos computacionais.
 
-- **Uso recomendado**: Ideal para grandes volumes de dados que são atualizados periodicamente, como tabelas de transações ou logs.
+#### Funcionamento Interno
+
+Quando um modelo está configurado como `incremental`, o dbt:
+
+1. Na **primeira execução**, cria a tabela com todos os dados da consulta.
+2. Nas **execuções seguintes**, executa apenas uma parte da consulta com base em uma condição, usando `is_incremental()` para incluir somente os dados novos ou atualizados.
+
+#### Exemplo:
+```sql
+{{ config(
+    materialized='incremental',
+    unique_key='id_venda'
+) }}
+
+SELECT *
+FROM {{ source('raw_data', 'vendas') }}
+{% if is_incremental() %}
+WHERE data_venda > (SELECT MAX(data_venda) FROM {{ this }})
+{% endif %}
+```
+
+#### Estratégias Suportadas
+
+- **Append-only** (padrão): insere apenas os dados novos.
+- **Merge**: atualiza registros existentes e insere novos.
+  ```sql
+  {{ config(
+      materialized='incremental',
+      unique_key='id_venda',
+      incremental_strategy='merge',
+      on_schema_change='sync_all_columns'
+  ) }}
+  ```
+
+#### Requisitos
+- Uma coluna incremental como `data_venda` ou um campo `updated_at`.
+- Chave única (`unique_key`) se for usar `merge`.
+
+#### Benefícios
+- Reduz o custo de execução.
+- Otimiza performance.
+- Permite pipelines de dados frequentes e eficientes.
+
+#### Quando Usar
+- Grandes volumes de dados atualizados periodicamente.
+- Dados de logs, transações, eventos, etc.
 
 ## Sources
 

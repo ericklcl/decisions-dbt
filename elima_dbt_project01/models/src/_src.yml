@@ -1,0 +1,142 @@
+version: 2
+
+models:
+  - name: src_customer
+    description: "Staging model for customer data from TPCH"
+    columns:
+      - name: c_custkey
+        description: "Customer key"
+      - name: c_name
+        description: "Customer name"
+      - name: c_address
+        description: "Customer address"
+      - name: c_nationkey
+        description: "Customer nation key"
+      - name: c_phone
+        description: "Customer phone"
+      - name: c_acctbal
+        description: "Customer account balance"
+      - name: c_mktsegment
+        description: "Customer market segment"
+      - name: c_comment
+        description: "Customer comment"
+
+  - name: src_orders
+    description: "Staging model for orders data from TPCH"
+    columns:
+      - name: o_orderkey
+        description: "Order key"
+      - name: o_custkey
+        description: "Order customer key"
+      - name: o_orderstatus
+        description: "Order status"
+      - name: o_totalprice
+        description: "Order total price"
+      - name: o_orderdate
+        description: "Order date"
+      - name: o_orderpriority
+        description: "Order priority"
+      - name: o_clerk
+        description: "Order clerk"
+      - name: o_shippriority
+        description: "Order ship priority"
+      - name: o_comment
+        description: "Order comment"
+
+  - name: src_region
+    description: "Staging model for region data from TPCH"
+    columns:
+      - name: r_regionkey
+        description: "Region key"
+      - name: r_name
+        description: "Region name"
+      - name: r_comment
+        description: "Region comment"
+
+  - name: src_nation
+    description: "Staging model for nation data from TPCH"
+    columns:
+      - name: n_nationkey
+        description: "Nation key"
+      - name: n_name
+        description: "Nation name"
+      - name: n_regionkey
+        description: "Region key"
+      - name: n_comment
+        description: "Nation comment"
+
+  - name: src_part
+    description: "Staging model for part data from TPCH"
+    columns:
+      - name: p_partkey
+        description: "Part key"
+      - name: p_name
+        description: "Part name"
+      - name: p_mfgr
+        description: "Part manufacturer"
+      - name: p_brand
+        description: "Part brand"
+      - name: p_type
+        description: "Part type"
+      - name: p_size
+        description: "Part size"
+      - name: p_container
+        description: "Part container"
+      - name: p_retailprice
+        description: "Part retail price"
+      - name: p_comment
+        description: "Part comment"
+
+  - name: src_supplier
+    description: "Staging model for supplier data from TPCH"
+    columns:
+      - name: s_suppkey
+        description: "Supplier key"
+      - name: s_name
+        description: "Supplier name"
+      - name: s_address
+        description: "Supplier address"
+      - name: s_nationkey
+        description: "Supplier nation key"
+      - name: s_phone
+        description: "Supplier phone"
+      - name: s_acctbal
+        description: "Supplier account balance"
+      - name: s_comment
+        description: "Supplier comment"
+
+  - name: src_lineitem
+    description: "Staging model for lineitem data from TPCH"
+    columns:
+      - name: l_orderkey
+        description: "Order key"
+      - name: l_linenumber
+        description: "Line number"
+      - name: l_partkey
+        description: "Part key"
+      - name: l_suppkey
+        description: "Supplier key"
+      - name: l_quantity
+        description: "Line item quantity"
+      - name: l_extendedprice
+        description: "Line item extended price"
+      - name: l_discount
+        description: "Line item discount"
+      - name: l_tax
+        description: "Line item tax"
+      - name: l_returnflag
+        description: "Return flag"
+      - name: l_linestatus
+        description: "Line status"
+      - name: l_shipdate
+        description: "Ship date"
+      - name: l_commitdate
+        description: "Commit date"
+      - name: l_receiptdate
+        description: "Receipt date"
+      - name: l_shipinstruct
+        description: "Shipping instructions"
+      - name: l_shipmode
+        description: "Shipping mode"
+      - name: l_comment
+        description: "Line item comment"
