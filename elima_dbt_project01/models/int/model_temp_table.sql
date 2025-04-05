@@ -1,0 +1,1 @@
+{{ create_temp_table('snowflake_source', 'raw_region') }}

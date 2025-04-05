@@ -6,6 +6,8 @@ models:
     columns:
       - name: c_custkey
         description: "Customer key"
+        tests:
+          - unique
       - name: c_name
         description: "Customer name"
       - name: c_address

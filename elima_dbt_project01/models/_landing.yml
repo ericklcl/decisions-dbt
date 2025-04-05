@@ -10,6 +10,8 @@ sources:
         description: "This is the raw customer table"
         columns:
           - name: c_custkey
+            tests:
+              - unique
             description: "Customer key"
           - name: c_name
             description: "Customer name"
@@ -76,6 +78,9 @@ sources:
         columns:
           - name: r_regionkey
             description: "Region key"
+            tests:
+              - accepted_values:
+                  values: [0, 1, 2]
           - name: r_name
             description: "Region name"
           - name: r_comment

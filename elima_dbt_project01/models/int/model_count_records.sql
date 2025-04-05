@@ -1,0 +1,1 @@
+{{ count_table_records(ref('src_nation')) }}

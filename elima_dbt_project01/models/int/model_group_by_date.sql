@@ -1,0 +1,1 @@
+{{ grouped_by_period(ref('stg_orders'), 'order_date', 'yearly') }}

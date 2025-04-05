@@ -60,8 +60,15 @@ models:
         description: "Nation identifier"
       - name: nation_name
         description: "Name of the nation"
+        tests:
+          - unique
+          - not_null
       - name: region_key
         description: "Foreign key to the region table"
+        tests:
+          - relationships:
+              to: ref('stg_region')
+              field: region_key
       - name: comment
         description: "Additional nation notes"
 
