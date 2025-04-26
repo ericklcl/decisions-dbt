@@ -1,0 +1,1 @@
+select {{ row_count_v2(ref("src_nation")) }} as id
