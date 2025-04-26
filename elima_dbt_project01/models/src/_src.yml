@@ -33,6 +33,11 @@ models:
       - name: o_orderstatus
         description: "Order status"
       - name: o_totalprice
+        tests:
+          - valida_column_not_negative
+          - valida_range_values:
+              minimo: 50
+              maximo: 1000000
         description: "Order total price"
       - name: o_orderdate
         description: "Order date"
@@ -49,6 +54,9 @@ models:
     description: "Staging model for region data from TPCH"
     columns:
       - name: r_regionkey
+        tests:
+          - unique
+          - not_null
         description: "Region key"
       - name: r_name
         description: "Region name"
