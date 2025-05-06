@@ -632,6 +632,126 @@ dbt run-operation criar_schema --args '{"schema_name": "staging"}'
 - Ações de administração no warehouse
 
 
+## Custom Generic Tests no dbt
+
+Os **Generic Tests** no dbt são testes reutilizáveis que validam colunas de modelos ou fontes com regras como `not_null`, `unique`, entre outras. Além dos testes nativos, o dbt permite criar **Custom Generic Tests** para aplicar validações específicas e reutilizáveis de acordo com as regras de negócio.
+
+---
+
+### O que é um Custom Generic Test?
+
+É um teste genérico definido pelo usuário no diretório `tests/` ou `macros/`, que pode ser aplicado diretamente nas colunas dos modelos através do arquivo `schema.yml`.
+
+---
+
+### Estrutura de um Custom Generic Test
+
+```sql
+-- tests/assert_positive_values.sql
+{% test assert_positive_values(model, column_name) %}
+
+SELECT *
+FROM {{ model }}
+WHERE {{ column_name }} <= 0
+
+{% endtest %}
+```
+
+Esse teste falha se encontrar valores menores ou iguais a zero na coluna testada.
+
+---
+
+### Como aplicar um Custom Generic Test
+
+No `schema.yml` do modelo:
+
+```yaml
+version: 2
+
+models:
+  - name: pagamentos
+    columns:
+      - name: valor
+        tests:
+          - assert_positive_values
+```
+
+> O nome `assert_positive_values` deve coincidir com o nome da macro.
+
+---
+
+### Passando argumentos para o teste
+
+Você pode adicionar lógica condicional no seu teste, utilizando argumentos opcionais:
+
+```sql
+-- tests/assert_min_length.sql
+{% test assert_min_length(model, column_name, min_length=5) %}
+
+SELECT *
+FROM {{ model }}
+WHERE LENGTH({{ column_name }}) < {{ min_length }}
+
+{% endtest %}
+```
+
+Aplicação com parâmetro:
+
+```yaml
+tests:
+  - assert_min_length:
+      min_length: 8
+```
+
+---
+
+### Reutilização com múltiplas colunas
+
+É possível aplicar o mesmo teste customizado a várias colunas:
+
+```yaml
+columns:
+  - name: email
+    tests:
+      - assert_min_length:
+          min_length: 10
+  - name: telefone
+    tests:
+      - assert_min_length:
+          min_length: 9
+```
+
+---
+
+### Boas práticas
+
+- Nomeie os testes com clareza e contexto (ex: `assert_`, `validate_`, `check_`)
+- Sempre retorne linhas que **violam a regra**
+- Use `WHERE` direto, sem `SELECT COUNT(*)` — o dbt já valida se existem linhas
+- Testes customizados devem ser armazenados em `tests/` ou `macros/`
+
+---
+
+### Executando os testes
+
+Para executar os testes:
+
+```bash
+dbt test
+```
+
+Para um modelo específico:
+
+```bash
+dbt test --select pagamentos
+```
+
+---
+
+Custom Generic Tests ajudam a manter a qualidade dos dados e padronizar validações em todo o projeto dbt.
+
+
+
 
 
 
