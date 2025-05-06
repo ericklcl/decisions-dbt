@@ -408,6 +408,229 @@ SELECT {% for coluna in colunas %} {{ coluna.name }} {% if not loop.last %}, {% 
 
 Esse código gera dinamicamente uma query que seleciona todas as colunas da tabela `clientes`.
 
+## Data Tests no dbt
+
+Os **Data Tests** (testes de dados) no dbt servem para validar a integridade, consistência e qualidade dos dados. Eles ajudam a garantir que as premissas sobre os dados estejam sendo respeitadas.
+
+### Tipos de Data Tests
+
+Existem dois principais tipos de data tests:
+
+1. **Generic Tests (Testes Genéricos)**
+2. **Singular Tests (Testes Personalizados)**
+
+### 1. Generic Tests (Testes Genéricos)
+
+Testes genéricos são validados com base em condições comuns aplicadas às colunas das tabelas. O dbt já fornece uma série de testes prontos que podem ser reutilizados facilmente.
+
+#### Exemplos de testes genéricos:
+
+```yaml
+version: 2
+
+models:
+  - name: clientes
+    columns:
+      - name: id
+        tests:
+          - not_null
+          - unique
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['ativo', 'inativo']
+```
+
+#### Testes genéricos disponíveis:
+
+* `not_null`: garante que nenhum valor na coluna seja nulo.
+* `unique`: garante que os valores da coluna sejam únicos.
+* `accepted_values`: define um conjunto de valores permitidos para uma coluna.
+* `relationships`: garante a integridade referencial entre duas tabelas.
+
+#### Exemplo com `relationships`:
+
+```yaml
+columns:
+  - name: cliente_id
+    tests:
+      - relationships:
+          to: ref('clientes')
+          field: id
+```
+
+### 2. Singular Tests (Testes Personalizados)
+
+Singular tests permitem criar regras personalizadas que são expressas como queries SQL que devem retornar **zero linhas** quando o teste passa.
+
+#### Exemplo:
+
+Crie um arquivo em `tests/test_clientes_sem_email.sql`:
+
+```sql
+SELECT *
+FROM {{ ref('clientes') }}
+WHERE email IS NULL
+```
+
+Se a query retornar alguma linha, o teste falha. Isso permite escrever qualquer lógica complexa de validação usando SQL puro.
+
+### Executando os Testes
+
+Para executar todos os testes:
+
+```bash
+dbt test
+```
+
+Executar testes de um modelo específico:
+
+```bash
+dbt test --select nome_do_modelo
+```
+
+Executar testes de um source específico:
+
+```bash
+dbt test --select source:raw_data.clientes
+```
+
+Executar apenas um teste personalizado (singular):
+
+```bash
+dbt test --select test_clientes_sem_email
+```
+
+### Boas Práticas com Data Tests
+
+* Escreva testes genéricos para todas as colunas críticas.
+* Use testes personalizados para validações específicas de negócio.
+* Automatize a execução dos testes em pipelines CI/CD.
+* Documente os testes no `schema.yml` para manter a rastreabilidade.
+
+Data Tests são essenciais para garantir a confiabilidade dos dados e prevenir erros silenciosos em pipelines analíticos.
+
+## Macros no dbt
+
+Macros no dbt são funções reutilizáveis escritas em Jinja que permitem adicionar lógica e automação ao seu projeto. Elas são úteis para:
+
+- Abstrair trechos de código SQL
+- Tornar modelos mais genéricos
+- Evitar repetição de código
+
+---
+
+### Criando uma Macro
+
+As macros devem ser criadas em arquivos `.sql` dentro do diretório `macros/` no seu projeto dbt.
+
+#### Exemplo básico
+
+```sql
+-- macros/minha_macro.sql
+{% macro gerar_seletor(coluna) %}
+    SELECT {{ coluna }} FROM minha_tabela
+{% endmacro %}
+```
+
+---
+
+### Utilizando uma Macro
+
+Macros podem ser usadas em modelos, testes, snapshots ou seeds:
+
+```sql
+{{ gerar_seletor('id') }}
+```
+
+---
+
+### Parâmetros e Lógica Condicional
+
+Macros podem aceitar argumentos e utilizar estruturas de controle:
+
+```sql
+{% macro filtrar_por_status(status='ativo') %}
+    WHERE status = '{{ status }}'
+{% endmacro %}
+```
+
+---
+
+### `run_query` — Executando SQL dentro da Macro
+
+O `run_query` permite executar instruções SQL dentro de uma macro e usar o resultado como entrada para decisões lógicas.
+
+#### Exemplo:
+
+```sql
+{% macro contar_registros(modelo) %}
+    {% set resultado = run_query("SELECT COUNT(*) FROM " ~ modelo) %}
+    {% if execute %}
+        {% set quantidade = resultado.columns[0].values()[0] %}
+        {{ log("Total de registros: " ~ quantidade, info=True) }}
+    {% endif %}
+{% endmacro %}
+```
+
+---
+
+### `if execute` — Evitando Execução Durante Compilação
+
+Use `{% if execute %}` para garantir que `run_query` e outras operações executem apenas durante a **execução real** do dbt (e não durante a compilação).
+
+```sql
+{% if execute %}
+  {% set resultado = run_query("SELECT COUNT(*) FROM tabela") %}
+{% endif %}
+```
+
+> Evita o erro: `run_query() is being called during compilation`
+
+---
+
+### Boas Práticas com Macros
+
+- Nomeie macros com clareza e contexto
+- Reutilize lógica repetida como joins e filtros
+- Documente parâmetros e propósito
+- Use `run_query` com parcimônia
+- Sempre utilize `if execute` antes de executar queries
+
+---
+
+### `run-operation` — Executando Macros Manualmente
+
+O comando `dbt run-operation` permite executar macros de forma isolada pelo terminal.
+
+### Sintaxe:
+
+```bash
+dbt run-operation <nome_da_macro> --args '{"param": "valor"}'
+```
+
+#### Exemplo com criação de schema:
+
+```sql
+{% macro criar_schema(schema_name) %}
+    {% if execute %}
+        {% do run_query("CREATE SCHEMA IF NOT EXISTS " ~ target.database ~ "." ~ schema_name) %}
+        {{ log("Schema " ~ schema_name ~ " criado com sucesso!", info=True) }}
+    {% endif %}
+{% endmacro %}
+```
+
+```bash
+dbt run-operation criar_schema --args '{"schema_name": "staging"}'
+```
+
+#### Casos de uso:
+
+- Criação de schemas e objetos auxiliares
+- Verificações e validações operacionais
+- Limpeza de dados temporários
+- Ações de administração no warehouse
+
 
 
 
