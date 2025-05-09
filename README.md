@@ -750,10 +750,251 @@ dbt test --select pagamentos
 
 Custom Generic Tests ajudam a manter a qualidade dos dados e padronizar validações em todo o projeto dbt.
 
+## dbt Analyses
 
+O diretório `analysis/` no dbt permite criar **consultas SQL exploratórias** que não são modelos (ou seja, não geram tabelas ou views no banco de dados), mas que podem ser versionadas e reutilizadas como parte do projeto.
 
+Essas análises são úteis para:
 
+- Exploração de dados
+- Relatórios ad-hoc
+- Comparações de antes/depois
+- Análises manuais versionadas com o restante do projeto
 
+---
 
+### Onde ficam as análises?
 
+Crie o diretório `analysis/` na raiz do projeto, se ainda não existir:
 
+```
+.
+├── models/
+├── analysis/
+│   └── minha_analise.sql
+├── dbt_project.yml
+```
+
+---
+
+### Exemplo 1: Contagem de registros por status
+
+```sql
+-- analysis/contagem_status.sql
+
+SELECT status, COUNT(*) AS total
+FROM {{ ref('clientes') }}
+GROUP BY status
+ORDER BY total DESC
+```
+
+---
+
+### Exemplo 2: Diferença entre duas execuções
+
+```sql
+-- analysis/variacao_vendas.sql
+
+WITH atual AS (
+    SELECT SUM(valor) AS total_atual
+    FROM {{ ref('fato_vendas') }}
+    WHERE data_venda BETWEEN '2024-01-01' AND '2024-01-31'
+),
+anterior AS (
+    SELECT SUM(valor) AS total_anterior
+    FROM {{ ref('fato_vendas') }}
+    WHERE data_venda BETWEEN '2023-01-01' AND '2023-01-31'
+)
+
+SELECT
+    atual.total_atual,
+    anterior.total_anterior,
+    atual.total_atual - anterior.total_anterior AS variacao
+FROM atual, anterior
+```
+
+---
+
+### Como executar uma análise
+
+As análises não são executadas com `dbt run`. Para ver os resultados, copie o conteúdo da análise e execute diretamente no console do seu banco de dados ou utilize ferramentas de visualização integradas ao dbt (como o dbt Cloud ou IDEs).
+
+---
+
+### Boas práticas
+
+- Use `{{ ref('...') }}` para referenciar modelos e garantir dependências corretas
+- Prefira arquivos com nomes descritivos como `comparativo_vendas.sql`, `clientes_sem_email.sql`
+- Utilize comentários para explicar o propósito da análise
+- Mantenha análises organizadas em subpastas se necessário (ex: `analysis/financeiro`, `analysis/marketing`)
+- Versione as análises como qualquer outro artefato dbt
+
+---
+
+### Organização por Domínio (Subpastas)
+
+Para manter o projeto limpo e escalável, é uma boa prática separar análises por tema ou área funcional.
+
+#### Estrutura sugerida
+
+```
+analysis/
+├── financeiro/
+│   └── resumo_receita.sql
+├── marketing/
+│   └── performance_campanha.sql
+├── produto/
+│   └── cancelamentos_mensais.sql
+```
+
+#### Exemplo: `analysis/financeiro/resumo_receita.sql`
+
+```sql
+-- Receita total e média por mês
+
+SELECT
+    DATE_TRUNC('month', data_venda) AS mes,
+    SUM(valor) AS receita_total,
+    AVG(valor) AS ticket_medio
+FROM {{ ref('fato_vendas') }}
+GROUP BY 1
+ORDER BY 1
+```
+
+#### Exemplo: `analysis/marketing/performance_campanha.sql`
+
+```sql
+-- Conversões por campanha
+
+SELECT
+    campanha,
+    COUNT(*) AS total_conversoes,
+    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS percentual
+FROM {{ ref('leads_convertidos') }}
+GROUP BY campanha
+ORDER BY total_conversoes DESC
+```
+
+#### Exemplo: `analysis/produto/cancelamentos_mensais.sql`
+
+```sql
+-- Taxa de cancelamento mensal
+
+WITH cancelamentos AS (
+    SELECT
+        DATE_TRUNC('month', data_cancelamento) AS mes,
+        COUNT(*) AS total_cancelamentos
+    FROM {{ ref('clientes') }}
+    WHERE status = 'cancelado'
+    GROUP BY 1
+),
+ativos AS (
+    SELECT
+        DATE_TRUNC('month', data_ativacao) AS mes,
+        COUNT(*) AS novos_clientes
+    FROM {{ ref('clientes') }}
+    WHERE status = 'ativo'
+    GROUP BY 1
+)
+
+SELECT
+    c.mes,
+    c.total_cancelamentos,
+    a.novos_clientes,
+    ROUND(100.0 * c.total_cancelamentos / NULLIF(a.novos_clientes, 0), 2) AS taxa_cancelamento
+FROM cancelamentos c
+LEFT JOIN ativos a ON c.mes = a.mes
+ORDER BY c.mes
+```
+
+---
+
+### Integração com Jinja
+
+Você pode utilizar macros e variáveis dentro das análises também:
+
+```sql
+-- analysis/analise_dinamica.sql
+
+{% set ano = var('ano', 2024) %}
+
+SELECT *
+FROM {{ ref('fato_vendas') }}
+WHERE EXTRACT(YEAR FROM data_venda) = {{ ano }}
+```
+
+---
+
+## Hooks no dbt
+
+Hooks no dbt permitem executar comandos personalizados **antes ou depois** de eventos importantes, como compilações, execuções de modelos, seeds ou snapshots. Eles são úteis para tarefas de auditoria, inicialização, limpeza ou logging.
+
+---
+
+### Tipos de Hooks
+
+- `on-run-start`: executado **antes** de iniciar o comando `dbt run`, `dbt seed`, `dbt snapshot` etc.
+- `on-run-end`: executado **depois** da execução principal.
+- `pre-hook`: executado **antes** de um modelo específico.
+- `post-hook`: executado **após** um modelo específico.
+
+---
+
+### on-run-start e on-run-end
+
+Definidos no `dbt_project.yml`:
+
+```yaml
+on-run-start:
+  - "{{ log('Iniciando execução do dbt...', info=True) }}"
+
+on-run-end:
+  - "{{ log('Execução finalizada.', info=True) }}"
+```
+
+Também podem conter SQL:
+
+```yaml
+on-run-start:
+  - "CREATE TABLE IF NOT EXISTS audit_log (mensagem STRING, data_execucao TIMESTAMP);"
+  - "{{ log('Tabela audit_log criada, se necessário.', info=True) }}"
+```
+
+---
+
+### 📦 Exemplo com macro
+
+Você pode utilizar macros nos hooks:
+
+```yaml
+on-run-end:
+  - "{{ my_project.log_execucao('fim da execução') }}"
+```
+
+```sql
+-- macros/log_execucao.sql
+{% macro log_execucao(msg) %}
+    {% do run_query("INSERT INTO audit_log VALUES ('" ~ msg ~ "', CURRENT_TIMESTAMP)") %}
+{% endmacro %}
+```
+
+---
+
+### pre-hook e post-hook no dbt_project.yml
+
+Você também pode definir `pre-hook` e `post-hook` globalmente no `dbt_project.yml`, aplicando para todos os modelos de um diretório específico:
+
+```yaml
+models:
+  meu_projeto:
+    +pre-hook: 
+      - "INSERT INTO audit_execucao (modelo, tipo, data_execucao) VALUES ('{{ this.name }}', 'pre', CURRENT_TIMESTAMP)"
+    +post-hook:
+      - "INSERT INTO audit_execucao (modelo, tipo, data_execucao) VALUES ('{{ this.name }}', 'post', CURRENT_TIMESTAMP)"
+```
+
+#### O que esse exemplo faz?
+
+- Executa um `INSERT` antes e depois de cada modelo ser executado
+- Utiliza `{{ this.name }}` para capturar dinamicamente o nome do modelo
+- Armazena logs de execução na tabela `audit_execucao`
